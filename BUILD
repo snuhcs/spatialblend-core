@@ -1,0 +1,13 @@
+# Copyright (c) 2024-2026 Seoul National University
+# SPDX-License-Identifier: MIT
+
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
+
+refresh_compile_commands(
+    name = "refresh_compile_commands",
+    exclude_external_sources = True,
+    targets = [
+        "//...",
+    ],
+)
+

@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "id": "R5-avatar-avatar-chatter",
+  "tier": "T2",
+  "regime": "jointly_feasible",
+  "verify_by": ["differential", "bounds"],
+
+  "spaces": [
+    {
+      "id": "A", "role": "source",
+      "walkable": [[0, 0], [20, 0], [20, 20], [0, 20]],
+      "elements": [
+        {
+          "tag": "sofa", "shared_id": 200, "parent": "room",
+          "transform": {"pos": [5, 5, 0], "yaw": 0.0},
+          "footprint": {"kind": "box", "size": [3, 3, 1]},
+          "propagate": false
+        }
+      ]
+    }
+  ],
+
+  "actors": [
+    {
+      "id": "user", "space": "A", "shared_id": 9001,
+      "anchors": [
+        {"name": "root", "offset": [0, 0, 0]},
+        {"name": "chest", "offset": [0, 0, 1.2]}
+      ],
+      "bindings": [
+        {"anchor": "root", "kernel": "spacing"},
+        {"anchor": "chest", "kernel": "facing"}
+      ],
+      "start": [5, 3.0, 1.5708]
+    },
+    {
+      "id": "peer", "space": "A", "shared_id": 9002,
+      "anchors": [{"name": "root", "offset": [0, 0, 0]}],
+      "bindings": [],
+      "start": [5.5, 3.0, 1.5708]
+    }
+  ],
+
+  "behavior": {
+    "kind": "script",
+    "script": [
+      {"op": "stand", "duration": 1.0, "jitter_sigma": 0.0}
+    ]
+  },
+
+  "core": {"referent_resolve": "linker", "weight_smoothing": 0.25, "min_move": 0.0, "min_yaw": 0.0,
+           "policy": "progressive", "controller": {"v_max": 1.4, "w_max": 2.0}},
+
+  "expect": [
+    {"check": "R5.avatar_chatter.no_relation_to_peer_avatar", "eps": 0.0}
+  ]
+}

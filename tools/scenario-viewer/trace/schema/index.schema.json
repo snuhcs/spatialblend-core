@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spatialblend.invalid/schema/scenario-trace/1.1.0/index",
+  "title": "spatialblend.scenario-trace index",
+  "type": "object",
+  "required": ["format", "schema_version", "provenance", "suites", "cases"],
+  "properties": {
+    "format": {"const": "spatialblend.scenario-trace.index"},
+    "schema_version": {"type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$"},
+    "provenance": {"type": "object", "required": ["producer", "generated_at", "schema_version"]},
+    "suites": {"type": "array", "items": {"type": "object", "required": ["id", "title"], "properties": {"id": {"type": "string"}, "title": {"type": "string"}, "description": {"type": "string"}, "source": {"type": "string"}, "kind": {"enum": ["cases", "table", "document"]}}}},
+    "cases": {"type": "array", "items": {"type": "object", "required": ["id", "suite", "title", "file"], "properties": {
+      "id": {"type": "string"}, "suite": {"type": "string"}, "title": {"type": "string"}, "rule": {"type": "string"},
+      "file": {"type": "string"}, "bytes": {"type": "integer"},
+      "git_sha": {"type": "string"},
+      "has_trace": {"type": "boolean"},
+      "pass": {"type": ["boolean", "null"]},
+      "families": {"type": "array", "items": {"type": "string"}},
+      "modes": {"type": "array", "items": {"type": "string"}},
+      "statuses": {"type": "array", "items": {"type": "string"}},
+      "sidecars": {"type": "array", "description": "1.1.0. Sidecar files of the case (for example a MotionGen joints sidecar). A viewer merges their channels into the case, keeping each channel's producer.", "items": {"type": "object", "required": ["file"], "properties": {"file": {"type": "string"}, "producer": {"type": "string"}}}}
+    }}},
+    "tables": {"type": "array", "items": {"type": "object", "required": ["id", "suite", "title", "file", "columns"], "properties": {"id": {"type": "string"}, "suite": {"type": "string"}, "title": {"type": "string"}, "file": {"type": "string"}, "columns": {"type": "array", "items": {"type": "string"}}, "rows": {"type": "integer"}, "source": {"type": "string"}, "trace_case": {"type": "string", "description": "name of the column that holds the case id of a row that has a trace"}}}},
+    "excluded": {"type": "array", "items": {"type": "string"}, "description": "data the producer left out on purpose, with the reason (e.g. dataset-derived)"},
+    "missing": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,205 @@
+name: core plugin build
+
+# Builds libspatialblend for Windows x64, Android arm64, Linux x64 and macOS arm64 on GitHub-hosted runners, strips it,
+# audits the exported sb_* symbols and uploads one artifact per platform (library, summary.txt, SHA256SUMS).
+# It does not create a release or a tag; publishing a release stays with the maintainers.
+on:
+  workflow_dispatch:
+  push:
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "spatialblend/**"
+      - "bazel/**"
+      - "third_party/**"
+      - "MODULE.bazel"
+      - "tools/audit_plugin_exports.py"
+      - ".github/workflows/plugins.yml"
+
+jobs:
+  windows:
+    name: Windows x64 libspatialblend.dll
+    # Pinned: VS 2026 (MSVC 14.52, windows-2025-vs2026) fails on boost.range (C2056 in reverse.hpp).
+    # windows-2022 has VS 2022 (MSVC 14.44).
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bazel
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Mount bazel cache
+        uses: actions/cache@v4
+        with:
+          path: "C:/b"
+          key: bazel-${{ runner.os }}-${{ hashFiles('**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'MODULE.bazel', '.bazelrc') }}
+          restore-keys: bazel-${{ runner.os }}-
+
+      - name: Build
+        shell: cmd
+        # A short output root keeps protobuf/gRPC include paths under MSVC's
+        # MAX_PATH; the default root fails with C1083 on protobuf headers.
+        run: bazel --output_user_root=C:/b build --copt=-DSPATIALBLEND_BUILD_DLL --strip=always //spatialblend/api/c:c_shared
+
+      - name: Audit exports
+        shell: pwsh
+        run: |
+          $dll = Get-ChildItem bazel-bin/spatialblend/api/c -Filter 'libspatialblend.dll' | Select-Object -First 1
+          if (-not $dll) { throw 'libspatialblend.dll not produced' }
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC" -Recurse -Filter dumpbin.exe | Where-Object FullName -match 'Hostx64\\x64' | Select-Object -First 1
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item $dll.FullName out/libspatialblend.dll
+          python tools/audit_plugin_exports.py `
+            --library out/libspatialblend.dll `
+            --dumpbin $dumpbin.FullName `
+            --summary out/summary.txt `
+            --checksum out/SHA256SUMS
+          if ($LASTEXITCODE -ne 0) { throw "export audit failed ($LASTEXITCODE)" }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libspatialblend-windows-x64
+          path: out/
+
+
+  linux:
+    name: Linux x64 libspatialblend.so
+    # Pinned: on ubuntu-26.04 BoringSSL fails with -Werror=discarded-qualifiers.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Audit self-test
+        run: python3 -I tools/test_audit_plugin_exports.py
+
+      - name: Build
+        run: bazel build //spatialblend/api/c:libspatialblend_c
+
+      - name: Audit exports
+        run: |
+          set -euo pipefail
+          mkdir -p out stage
+          tar -xf bazel-bin/spatialblend/api/c/libspatialblend_c.tar -C stage
+          test -f stage/lib/libspatialblend.so
+          cp stage/lib/libspatialblend.so out/libspatialblend.so
+          chmod u+w out/libspatialblend.so   # Bazel outputs are read-only
+          strip --strip-unneeded out/libspatialblend.so
+          python3 tools/audit_plugin_exports.py \
+            --library out/libspatialblend.so \
+            --headers spatialblend/api/c \
+            --summary out/summary.txt \
+            --checksum out/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libspatialblend-linux-x64
+          path: out/
+
+
+  android:
+    name: Android arm64 libspatialblend.so
+    runs-on: ubuntu-24.04   # pinned like the Linux job
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: bazelbuild/setup-bazelisk@v3
+
+      # Pin NDK r25c (25.2.9519653): the device-verified library is built with it. r27d (clang 18) builds showed device
+      # regressions (docs/android.md).
+      - name: Install NDK r25c (checksum-verified, tools/ndk_r25c.sh)
+        id: ndk
+        shell: bash
+        run: bash tools/ndk_r25c.sh install
+
+      - name: Toolchain
+        run: |
+          set -euo pipefail
+          grep -q '^Pkg.Revision = 25.2.9519653$' "${{ steps.ndk.outputs.ndk-path }}/source.properties" || { echo "expected NDK r25c (25.2.9519653)"; exit 1; }
+          echo "ANDROID_NDK_HOME=${{ steps.ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: bazel build --config=android //spatialblend/api/c:libspatialblend_c
+
+      - name: Audit exports
+        run: |
+          set -euo pipefail
+          mkdir -p out stage
+          tar -xf bazel-bin/spatialblend/api/c/libspatialblend_c.tar -C stage
+          test -f stage/lib/libspatialblend.so
+          bash tools/ndk_r25c.sh check-lib stage/lib/libspatialblend.so   # clang 14.0.7, so no cached r27d NDK slipped in
+          cp stage/lib/libspatialblend.so out/libspatialblend.so
+          STRIP="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -path '*/bin/llvm-strip' \( -type f -o -type l \) | head -n 1)"   # a symlink in some NDKs
+          test -n "$STRIP"
+          chmod u+w out/libspatialblend.so   # Bazel outputs are read-only
+          "$STRIP" --strip-unneeded out/libspatialblend.so
+          NM="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -type f -path '*/bin/llvm-nm' | head -n 1)"
+          test -n "$NM"
+          test -x "$NM"
+          python3 tools/audit_plugin_exports.py \
+            --library out/libspatialblend.so \
+            --nm "$NM" \
+            --headers spatialblend/api/c \
+            --summary out/summary.txt \
+            --checksum out/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libspatialblend-android-arm64
+          path: out/
+
+
+  macos:
+    name: macOS libspatialblend.dylib
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Bazel
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Mount bazel cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-${{ runner.os }}-${{ hashFiles('**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'MODULE.bazel', '.bazelrc') }}
+          restore-keys: bazel-${{ runner.os }}-
+
+      - name: Build
+        run: bazel build //spatialblend/api/c:libspatialblend_c
+
+      - name: Audit exports
+        run: |
+          set -euo pipefail
+          mkdir -p out stage
+          tar -xf bazel-bin/spatialblend/api/c/libspatialblend_c.tar -C stage
+          test -f stage/lib/libspatialblend.dylib
+          cp stage/lib/libspatialblend.dylib out/libspatialblend.dylib
+          chmod u+w out/libspatialblend.dylib   # Bazel outputs are read-only
+          strip -x out/libspatialblend.dylib
+          python3 tools/audit_plugin_exports.py \
+            --library out/libspatialblend.dylib \
+            --headers spatialblend/api/c \
+            --summary out/summary.txt \
+            --checksum out/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libspatialblend-macos
+          path: out/
+

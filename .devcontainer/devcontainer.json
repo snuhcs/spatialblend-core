@@ -1,0 +1,87 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+{
+	"name": "Ubuntu",
+	// Built from the Dockerfile beside this file
+	"build": { "dockerfile": "Dockerfile" },
+	"runArgs": [
+		"--network=host",
+		"--add-host=host.docker.internal:host-gateway",
+		"--cap-add=SYS_PTRACE",
+		"-e",
+		"DISPLAY=${localEnv:DISPLAY}",
+		"-v",
+		"/tmp/.X11-unix:/tmp/.X11-unix:rw"
+	],
+	"features": {
+		"git": "latest",
+		"git-lfs": "3.1.4",
+		"desktop-lite": {
+			"password": "vscode",
+			"webPort": "6080",
+			"vncPort": "5901"
+		}
+	},
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "mkdir -p ~/.config/fish && cp .devcontainer/config.fish ~/.config/fish/config.fish && chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* 2>/dev/null || true && eval $(ssh-agent -s) && ssh-add ~/.ssh/id_ed25519 2>/dev/null || true",
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode-remote.remote-containers",
+				"bazelbuild.vscode-bazel",
+				"ms-vscode.cpptools-extension-pack",
+				"xaver.clang-format",
+				"ms-azuretools.vscode-docker",
+				"StackBuild.bazel-stack-vscode",
+				"StackBuild.bazel-stack-vscode-cc",
+				"ms-vscode.cpptools",
+				"akiramiyakoda.cppincludeguard"
+			],
+			"settings": {
+				"terminal.integrated.shell.linux": "/usr/bin/fish"
+			}
+		}
+	},
+	"forwardPorts": [
+		40004, // space receiver
+		40005, // hub receiver
+		443, // https
+		6080, // web
+		5901, // vnc
+		5900 // x11vnc
+	],
+	"portsAttributes": {
+		"40004": {
+			"label": "space receiver"
+		},
+		"40005": {
+			"label": "hub receiver"
+		},
+		"443": {
+			"label": "https"
+		},
+		"6080": {
+			"label": "desktop"
+		},
+		"5901": {
+			"label": "vnc"
+		},
+		"5900": {
+			"label": "x11vnc"
+		}
+	},
+	"mounts": [
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+	],
+	"remoteEnv": {
+		"SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}"
+	},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}

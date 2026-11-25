@@ -1,0 +1,98 @@
+module(
+    name = "spatialblend_core",
+    version = "1.0.0",
+)
+
+bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "c-ares", version = "1.19.1.bcr.1")
+bazel_dep(name = "abseil-cpp", version = "20250127.0")
+bazel_dep(name = "googletest", version = "1.15.2")
+bazel_dep(name = "eigen", version = "3.4.0.bcr.3")
+bazel_dep(name = "protobuf", version = "30.0")
+bazel_dep(name = "grpc", version = "1.72.0-pre1")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+
+bazel_dep(name = "rules_python", version = "1.3.0")
+bazel_dep(name = "pybind11_bazel", version = "2.12.0")
+
+# bazel_dep(name = "rules_apple", version = "3.19.1")
+bazel_dep(name = "rules_android_ndk", version = "0.1.3")
+
+bazel_dep(name = "boost.geometry", version = "1.83.0.bcr.2")
+bazel_dep(name = "boost.multiprecision", version = "1.83.0.bcr.2", dev_dependency = True)
+
+bazel_dep(name = "nlohmann_json", version = "3.11.3.bcr.1")
+
+# CDT - Constrained Delaunay Triangulation
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+http_archive(
+    name = "CDT",
+    urls = ["https://github.com/artem-ogre/CDT/archive/refs/tags/1.4.4.tar.gz"],
+    sha256 = "97e57bdd1cf8219dcc81634236a502390a20dda3599dd3414a74343b7f03427f",
+    strip_prefix = "CDT-1.4.4/CDT",
+    build_file = "//third_party/CDT:CDT.BUILD",
+)
+
+# Hedron compile_commands.json generator for IDE support
+git_repository(
+    name = "hedron_compile_commands",
+    commit = "4f28899228fb3ad0126897876f147ca15026151e",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+)
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    configure_coverage_tool = False,
+    ignore_root_user_error = True,
+    python_version = "3.10",
+)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "spatialblend_deps",
+    python_version = "3.10",
+    requirements_lock = "//third_party/python:requirements.lock",
+)
+
+use_repo(pip, "spatialblend_deps")
+
+single_version_override(
+    module_name = "boost.thread",
+    patch_strip = 1,
+    patches = [
+        "//third_party/boost.thread:android_link_fix.patch",
+    ],
+    version = "1.83.0.bcr.2",
+)
+
+single_version_override(
+    module_name = "boost.qvm",
+    patch_strip = 1,
+    patches = [
+        "//third_party/boost.qvm:clang-cl_fix.patch",
+    ],
+    version = "1.83.0.bcr.2",
+)
+
+# Windows fix: normalize backslash paths in _create_symlinks to avoid
+# "Cannot write outside of the repository directory" error
+single_version_override(
+    module_name = "rules_android_ndk",
+    patch_strip = 1,
+    patches = [
+        "//third_party/rules_android_ndk:windows_fix.patch",
+    ],
+    version = "0.1.3",
+)
+
+# Android NDK configuration - uses rules_android_ndk for Bazel 8.x compatibility
+# Uses ANDROID_NDK_HOME from environment. Release builds use NDK r25c (25.2.9519653); rules_android_ndk 0.1.3 needs r25b+.
+android_ndk = use_extension("@rules_android_ndk//:extension.bzl", "android_ndk_repository_extension")
+android_ndk.configure(
+    api_level = 21,
+)
+use_repo(android_ndk, "androidndk")
+# The NDK toolchains are not registered here: --config=android adds them (--extra_toolchains in .bazelrc, and
+# bazel/adb_test.bzl's transition does the same), so a desktop build never needs ANDROID_NDK_HOME.

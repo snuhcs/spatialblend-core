@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spatialblend.invalid/schema/scenario-trace/1.0.0/channel-types",
+  "title": "channel type registry (closed, v1.0.0)",
+  "description": "types.<name> is the schema of channel.data for channel.type == <name>. Arrays of numbers may hold null where the producer did not export a value (never NaN).",
+  "$defs": {
+    "numarr": {
+      "type": "array",
+      "items": {
+        "type": [
+          "number",
+          "null"
+        ]
+      }
+    },
+    "intarr": {
+      "type": "array",
+      "items": {
+        "type": [
+          "integer",
+          "null"
+        ]
+      }
+    },
+    "strarr": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "csr_in_scope": {
+      "type": "object",
+      "required": [
+        "offsets",
+        "family",
+        "referent"
+      ],
+      "properties": {
+        "offsets": {
+          "$ref": "#/$defs/intarr"
+        },
+        "family": {
+          "$ref": "#/$defs/intarr"
+        },
+        "referent": {
+          "$ref": "#/$defs/intarr"
+        }
+      }
+    },
+    "csr_dropped": {
+      "type": "object",
+      "required": [
+        "offsets",
+        "family",
+        "referent",
+        "reason"
+      ],
+      "properties": {
+        "offsets": {
+          "$ref": "#/$defs/intarr"
+        },
+        "family": {
+          "$ref": "#/$defs/intarr"
+        },
+        "referent": {
+          "$ref": "#/$defs/intarr"
+        },
+        "reason": {
+          "$ref": "#/$defs/intarr",
+          "description": "index into reasons"
+        },
+        "reasons": {
+          "$ref": "#/$defs/strarr"
+        }
+      }
+    }
+  },
+  "types": {
+    "pose3d": {
+      "type": "object",
+      "required": [
+        "n",
+        "p",
+        "q"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "p": {
+          "$ref": "#/$defs/numarr",
+          "description": "3n: x,y,z per tick"
+        },
+        "q": {
+          "$ref": "#/$defs/numarr",
+          "description": "4n: qx,qy,qz,qw per tick"
+        },
+        "valid": {
+          "$ref": "#/$defs/intarr",
+          "description": "n: 1 = the producer exported this tick, 0 = no value (p,q then hold filler zeros)"
+        }
+      }
+    },
+    "scalar": {
+      "type": "object",
+      "required": [
+        "n",
+        "v"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "v": {
+          "$ref": "#/$defs/numarr"
+        }
+      }
+    },
+    "vector": {
+      "type": "object",
+      "required": [
+        "n",
+        "dim",
+        "v"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dim": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "v": {
+          "$ref": "#/$defs/numarr"
+        },
+        "names": {
+          "$ref": "#/$defs/strarr"
+        }
+      }
+    },
+    "enum": {
+      "type": "object",
+      "required": [
+        "n",
+        "codes",
+        "labels"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "codes": {
+          "$ref": "#/$defs/intarr",
+          "description": "index into labels; null = no value"
+        },
+        "labels": {
+          "$ref": "#/$defs/strarr"
+        }
+      }
+    },
+    "bitset": {
+      "type": "object",
+      "required": [
+        "n",
+        "v",
+        "bits"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "v": {
+          "$ref": "#/$defs/intarr"
+        },
+        "bits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "bit",
+              "name"
+            ],
+            "properties": {
+              "bit": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "events"
+      ],
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "tick",
+              "kind"
+            ],
+            "properties": {
+              "tick": {
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "data": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "n",
+        "mode",
+        "in_scope",
+        "dropped"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer"
+        },
+        "mode": {
+          "type": "object",
+          "required": [
+            "codes",
+            "labels"
+          ],
+          "properties": {
+            "codes": {
+              "$ref": "#/$defs/intarr"
+            },
+            "labels": {
+              "$ref": "#/$defs/strarr"
+            }
+          }
+        },
+        "container": {
+          "$ref": "#/$defs/intarr",
+          "description": "per tick element id of the container / entered referent, null = none"
+        },
+        "transfer": {
+          "$ref": "#/$defs/intarr",
+          "description": "per tick 0/1"
+        },
+        "yaw_source": {
+          "type": "object",
+          "properties": {
+            "codes": {
+              "$ref": "#/$defs/intarr"
+            },
+            "labels": {
+              "$ref": "#/$defs/strarr"
+            }
+          }
+        },
+        "families": {
+          "$ref": "#/$defs/strarr",
+          "description": "family labels for in_scope.family / dropped.family"
+        },
+        "in_scope": {
+          "$ref": "#/$defs/csr_in_scope"
+        },
+        "dropped": {
+          "$ref": "#/$defs/csr_dropped"
+        },
+        "border": {
+          "$ref": "#/$defs/intarr",
+          "description": "per tick 0/1: the container is among the referents as its border relation"
+        }
+      }
+    },
+    "relation_set": {
+      "type": "object",
+      "required": [
+        "n",
+        "offsets",
+        "families",
+        "family",
+        "referent"
+      ],
+      "description": "CSR: relations of tick t are rows offsets[t]..offsets[t+1]-1 of every column. Vector columns are flat (3 per row), null where not exported.",
+      "properties": {
+        "n": {
+          "type": "integer"
+        },
+        "offsets": {
+          "$ref": "#/$defs/intarr"
+        },
+        "families": {
+          "$ref": "#/$defs/strarr"
+        },
+        "family": {
+          "$ref": "#/$defs/intarr"
+        },
+        "referent": {
+          "$ref": "#/$defs/intarr",
+          "description": "shared id of the referent"
+        },
+        "weight": {
+          "$ref": "#/$defs/numarr",
+          "description": "annealed policy weight"
+        },
+        "R_src": {
+          "$ref": "#/$defs/numarr"
+        },
+        "d_m": {
+          "$ref": "#/$defs/numarr",
+          "description": "support distance, metres"
+        },
+        "contact_p": {
+          "$ref": "#/$defs/numarr",
+          "description": "3 per row, source world: contact point on the support (Spacing / AffordancePose)"
+        },
+        "look_at_p": {
+          "$ref": "#/$defs/numarr",
+          "description": "3 per row, Facing look-at point (source world)"
+        },
+        "look_at_vertex": {
+          "$ref": "#/$defs/intarr",
+          "description": "silhouette vertex index of the look-at, -1 = hit point / none"
+        },
+        "angle_err_rad": {
+          "$ref": "#/$defs/numarr"
+        },
+        "occluded": {
+          "$ref": "#/$defs/intarr",
+          "description": "0/1, null = not exported"
+        },
+        "R_rx": {
+          "$ref": "#/$defs/numarr",
+          "description": "receiver-side R at the proposal"
+        },
+        "err_rx": {
+          "$ref": "#/$defs/numarr",
+          "description": "|R_rx - R_src| at the proposal"
+        },
+        "R_rx_body": {
+          "$ref": "#/$defs/numarr",
+          "description": "receiver R at the embodied body sample"
+        },
+        "rx_point_p": {
+          "$ref": "#/$defs/numarr",
+          "description": "3 per row: the receiver-side counterpart point (decoded approach point / look-at witness)"
+        }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "required": [
+        "n",
+        "status",
+        "p",
+        "q"
+      ],
+      "properties": {
+        "n": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "object",
+          "required": [
+            "codes",
+            "labels"
+          ],
+          "properties": {
+            "codes": {
+              "$ref": "#/$defs/intarr"
+            },
+            "labels": {
+              "$ref": "#/$defs/strarr"
+            }
+          }
+        },
+        "cause": {
+          "type": "object",
+          "required": [
+            "v",
+            "bits"
+          ],
+          "properties": {
+            "v": {
+              "$ref": "#/$defs/intarr"
+            },
+            "bits": {
+              "type": "array"
+            }
+          }
+        },
+        "flags": {
+          "type": "object",
+          "required": [
+            "v",
+            "bits"
+          ],
+          "properties": {
+            "v": {
+              "$ref": "#/$defs/intarr"
+            },
+            "bits": {
+              "type": "array"
+            }
+          }
+        },
+        "p": {
+          "$ref": "#/$defs/numarr"
+        },
+        "q": {
+          "$ref": "#/$defs/numarr"
+        },
+        "valid": {
+          "$ref": "#/$defs/intarr"
+        },
+        "err": {
+          "type": "object",
+          "description": "named nullable columns: spacing_target, spacing_sample, facing_target, facing_sample (R units), scale_m"
+        }
+      }
+    },
+    "joints": {
+      "type": "object",
+      "required": [
+        "n",
+        "joint_count",
+        "p",
+        "q"
+      ],
+      "description": "RESERVED for skeleton producers (MotionGen). p: 3 per joint per tick, q: 4 per joint per tick, tick-major. Joint order = actor.skeleton.joints.",
+      "properties": {
+        "n": {
+          "type": "integer"
+        },
+        "joint_count": {
+          "type": "integer"
+        },
+        "p": {
+          "$ref": "#/$defs/numarr"
+        },
+        "q": {
+          "$ref": "#/$defs/numarr"
+        }
+      }
+    },
+    "metrics_row": {
+      "type": "object",
+      "required": [
+        "row"
+      ],
+      "properties": {
+        "row": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

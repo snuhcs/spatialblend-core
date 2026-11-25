@@ -1,0 +1,391 @@
+// Copyright (c) 2024-2026 Seoul National University
+// SPDX-License-Identifier: MIT
+
+syntax = "proto3";
+package spatialblend_v2.proto;
+
+service HubService {
+  rpc ConnectToHub(ConnectRequest) returns (BootstrapPayload);
+  rpc CompleteBootstrap(BootstrapResponse) returns (Response);
+  rpc DisconnectFromHub(DisconnectRequest) returns (Response);
+  rpc Subscribe(SubscribeRequest) returns (stream SpaceEvent);
+  rpc UpdateActorState(UpdateActorStateRequest) returns (Response);
+  rpc ShareElement(ShareElementRequest) returns (Response);
+  rpc PropagateRelation(PropagateRelationRequest) returns (Response);
+}
+
+// --- Connection ---
+message ConnectRequest { int64 space_id = 1; }
+message DisconnectRequest { int64 space_id = 1; }
+message SubscribeRequest { int64 space_id = 1; }
+message Response { bool success = 1; string error_message = 2; }
+
+// --- Bootstrap ---
+message ElementProto {
+  int64 element_id = 1;
+  int64 shared_id = 3;
+  string tag = 4;
+  int64 parent_id = 5;
+  reserved 2;
+  // One per live share the host stands for with this element (sb_share_element
+  // and not unshared since): the share's current ADDED event verbatim (opaque
+  // user_data, source handle). Usually zero or one; several when the host
+  // linked more than one received share onto this element. The joiner replays it onto this element exactly
+  // as a live share would have been received, so a late joiner gets the same
+  // objects as a peer that was subscribed when the share happened.
+  repeated ElementEventProto shares = 6;
+}
+
+message BindingProto {
+  int64 actor_shared_id = 1;
+  string anchor_name = 2;
+  int32 kernel_type = 3;
+  int64 scope_root_id = 4;
+  string tag_filter = 5;
+}
+
+message AnchorProto {
+  string name = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+}
+
+message ActorProto {
+  int64 actor_shared_id = 1;
+  repeated AnchorProto anchors = 2;
+}
+
+message PolicyConfigProto {
+  double eta_0 = 1;
+  double decay_gamma = 2;
+  double epsilon = 3;
+  double step_duration = 4;
+}
+
+message BootstrapPayload {
+  repeated ElementProto elements = 1;
+  repeated BindingProto bindings = 2;
+  repeated ActorProto actors = 3;
+  PolicyConfigProto policy = 4;
+  // The identity the host gives this peer in its room. A space id that crossed
+  // the wire must be unique among the room's peers, and every device numbers
+  // its own spaces from 1, so the joiner adopts this instead of the id it sent
+  // in ConnectRequest. 0 = not assigned (a host that predates the field): the
+  // joiner keeps the id it proposed.
+  int64 assigned_space_id = 5;
+}
+
+message BootstrapResponse {
+  int64 space_id = 1;
+  bool success = 2;
+}
+
+// --- Relation Update ---
+message SupportProto {
+  repeated double world_transform = 1;
+  repeated double boundary_points = 2;
+  bool has_contact = 3;
+  // Fields 4/5 were a lossy encoding of contact_normalized (radial_ratio cast to
+  // int32). Superseded by 6-10; kept reserved so the numbers are not reused.
+  reserved 4, 5;
+  // contact_normalized (NormalizedPolygonPosition), faithfully serialized.
+  int32 contact_strategy = 6;  // 0=radial, 1=mvc
+  double contact_angle = 7;
+  double contact_radial_ratio = 8;
+  repeated double contact_mvc_weights = 9;
+  double contact_height_ratio = 10;
+  // Canonical interior chart coordinate (NormalizedInterior) for within-element
+  // pose transfer across differently shaped/typed elements.
+  bool has_interior = 11;
+  int32 interior_kind = 12;  // 0=box-uvw, 1=mvc, 2=polar
+  repeated double interior_uvw = 13;  // size 3
+  repeated double interior_weights = 14;
+  // Named sub-region this support is grounded on. Empty = whole boundary.
+  string sub_region_name = 15;
+  // The contact point in the SOURCE referent's own local frame (size 2: x,y).
+  // Same frame as encoded_state's local x/y in RelationPayloadProto -- lets
+  // the decoder (RelationSolver::DecodeTargetPoint) recover the SOURCE
+  // actor's metric offset FROM the support/contact point (encoded_state minus
+  // this), instead of only from the referent's center, for an exact
+  // approach-branch round trip in an identity/same-scale room.
+  repeated double contact_point_local = 16;  // size 2
+  // RadialSurfaceChart version of contact_normalized. 0 = sender
+  // predates versioning (pure radial chart).
+  uint32 contact_chart_version = 17;
+  // Perimeter fraction of the contact (nearest boundary point) from the
+  // forward-ray hit, along the vertex order; the receiver-convexity chart
+  // (NormalizedPolygonPosition::boundary_arclen). Absent = a sender that
+  // predates it: the receiver then decodes radially as before.
+  bool has_contact_boundary_arclen = 18;
+  double contact_boundary_arclen = 19;
+  // Fraction of the offset curve at the sender's own stand-off distance
+  // (NormalizedPolygonPosition::standoff_fraction). Absent = no stand-off chart.
+  bool has_standoff_fraction = 20;
+  double standoff_fraction = 21;
+  // Planar distance from the actor to the nearest boundary edge (Support::
+  // edge_depth_m). Absent = unknown.
+  bool has_edge_depth = 22;
+  double edge_depth_m = 23;
+  // Polar angle of the source position about the source polygon's centroid
+  // (NormalizedPolygonPosition::standoff_angle), the stand-off chart of a convex
+  // receiver. Absent = no stand-off angle.
+  bool has_standoff_angle = 24;
+  double standoff_angle = 25;
+  // The referent is the container the actor is inside (Support::container_self).
+  bool container_self = 26;
+  // Closest boundary point to the actor in the boundary polygon's own frame
+  // (Support::border_point), size 2. Absent = not inside / a sender that predates it.
+  repeated double border_point = 27;
+  // Start of the final straight leg of the actor's geodesic onto the contact
+  // (Support::approach_origin_local), size 2. Absent = the anchor offset.
+  repeated double approach_origin = 28;
+  // Facing: 1 + the ring index of the silhouette vertex the look-at contact was chosen at
+  // (Support::look_at_vertex). 0 = the gaze hits the referent, or a sender that predates it.
+  uint32 look_at_vertex_plus_one = 29;
+  // Facing: the anchor's path since the source's previous evaluation crossed the referent's
+  // boundary (Support::look_at_boundary_crossed).
+  bool look_at_boundary_crossed = 30;
+  // SubRegion::chart of the named sub-region on the sender (0 radial, 1 frame-stretch, 2 frame-contain). 0 = absent =
+  // a sender that predates it: the radial chart.
+  int32 sub_region_chart = 31;
+  // 32: an unreleased chart_boundary_points (the boundary is the declared shape itself).
+  reserved 32;
+}
+
+message RelationPayloadProto {
+  int64 referent_shared_id = 1;
+  string anchor_name = 2;
+  repeated double encoded_state = 3;
+  double proximity = 4;
+  SupportProto support = 5;
+  int32 kernel_type = 6;
+  double estimated_time = 7;
+  // Absolute boundary / support distance in metres (Hall-proxemic engagement
+  // signal; the AffordancePose engagement distance). `optional` gives
+  // it presence: absent = unknown (a sender that left it unset, or a legacy
+  // proto3 sender whose value 0.0 was not serialized), never "0 = engaged".
+  // Wire-compatible with the former plain double.
+  optional double support_distance_m = 8;
+  // Source-side referent handle so the receiver can resolve the referent via the
+  // cross-space ElementLinker (the PRIMARY path; shared-id is only the fallback
+  // for not-yet-linked elements). Without these, a referent whose cross-space
+  // identity is linker-based (host-shared furniture + LinkToExisting, different
+  // element ids per space) cannot be resolved on the wire → the relation drops →
+  // the clone never commits ("stuck in the middle").
+  int64 referent_source_space_id = 9;
+  int64 referent_source_element_id = 10;
+  // The diameter (bounding-box diagonal) of the SOURCE actor's containing
+  // navigable scope that `proximity` was normalized against. Paired
+  // with support_distance_m so the decoder can reconstruct the target
+  // standoff as support_distance_m * (target_scope_diameter /
+  // source_scope_diameter_m) -- exact when the target scope is the same
+  // size (identity/same-scale rooms), R-preserving (Eq 8) otherwise. <= 0
+  // means unset (legacy payload / no containing scope at encode time); the
+  // decoder falls back to reconstructing distance from `proximity` alone.
+  double source_scope_diameter_m = 11;
+  // Identity of the SOURCE element whose navigable geometry
+  // normalized `proximity` (shared id + linker handle; 0 = unknown), so the
+  // receiver denormalizes over its counterpart.
+  int64 scope_shared_id = 12;
+  int64 scope_source_space_id = 13;
+  int64 scope_source_element_id = 14;
+  // The source binding this relation was extracted under (ordinal on
+  // the source actor, and its revision). Presence = known; an absent
+  // binding_revision (legacy sender, or an uncertified binding) is unknown.
+  optional uint64 source_binding_ordinal = 15;
+  optional uint64 binding_revision = 16;
+  // AffordancePose only: the anchor's pose relative to the
+  // support, beyond the [angle, radial_ratio] support point already in
+  // encoded_state -- its in-plane offset from that support point (support-
+  // local frame, u/v) and its height above the support plane (also
+  // support-local). `optional` gives presence: absent = unknown (a pre-pose-fit
+  // sender, or any other relation family), never "0 = exactly on the
+  // support". Presence of all three is the AffordancePose R formula version
+  // 1 (pose fit); absence is version 0 (`proximity` is then the whole R and
+  // the receiver scores both sides by it). `proximity` stays the geometric
+  // 1/(1+distance) component either way. Appended fields (the existing pattern of
+  // support_distance_m / binding_revision): a pre-pose-fit receiver simply never
+  // reads these.
+  optional double ap_offset_u_m = 17;
+  optional double ap_offset_v_m = 18;
+  optional double ap_height_m = 19;
+  // v1 update count n = d_old / (d_old - d_new). Absent = no valid intent
+  // (static or receding, or a sender that predates the field). 1 = contact.
+  optional double update_count = 20;
+  // ABI 4.11: an inner relation of the subject anchor to the affordance pose of this tag of the
+  // referent object (RelationPayload::affordance_pose_tag). Absent = not an inner relation.
+  optional string affordance_pose_tag = 21;
+  // The subject anchor's orientation beyond yaw (sb_orientation_type_t, radians), a
+  // per-anchor pass-through. Absent = a sender that predates it.
+  optional int32 subject_orientation_type = 22;
+  optional double subject_pitch = 23;
+  optional double subject_roll = 24;
+  // A Facing relation's offset rotation sign this update (+1 / -1). Absent = 0 (none, or a
+  // sender that predates it): the receiver then turns the short way.
+  optional sint32 facing_rotation_sign = 25;
+  // The Facing offset OPENED this update (v1 counted the long way round). Absent = false.
+  optional bool facing_opening = 26;
+}
+
+message RelationUpdateProto {
+  int64 source_space_id = 1;
+  int64 actor_shared_id = 2;
+  repeated RelationPayloadProto payloads = 3;
+  double step_duration = 4;
+  // Source actor handle so the receiver resolves the local clone via the
+  // ElementLinker (link recorded at share), not by matching actor_shared_id.
+  int64 actor_source_space_id = 5;
+  int64 actor_source_element_id = 6;
+  // Per-(source_space_id, actor_shared_id) monotonically increasing
+  // delivery counter (see RemoteRelationUpdate::sequence in remote_update.h)
+  // -- lets a receiver dedupe an exact-replay delivery. 0 = not assigned.
+  int64 sequence = 7;
+  // Source space's own Space::space_clock_ at propagate time (see
+  // RemoteRelationUpdate::source_clock in remote_update.h) -- the receiver
+  // advances its own clock by the REAL elapsed source time (delta between
+  // successive source_clock values for this key) instead of the constant
+  // step_duration, so a peer's trace "t" tracks real time across heartbeat
+  // gaps too. 0.0 = unset (receiver falls back to step_duration).
+  double source_clock = 8;
+  // Timing mode (RemoteRelationUpdate::timing), its source sample time and
+  // observation epoch. Absent = a legacy update (older senders).
+  optional RelationUpdateTimingProto timing = 9;
+  optional double source_time = 10;
+  optional uint64 source_epoch = 11;
+  // RemoteRelationUpdate::quiet_since_last_send -- the sender asserts
+  // the interval this update closes was a movement-gated heartbeat gap.
+  // Absent = false (never credited as stillness).
+  optional bool quiet_since_last_send = 12;
+  // Containment transfer (RemoteRelationUpdate::containment): the source root's
+  // pose in the frame of the flagged Containment element that contains it.
+  // Absent = root not contained; a peer that predates this field ignores it.
+  optional ContainmentObservationProto containment = 13;
+  // Field 14 (handover_outgoing) belonged to the removed referent handover:
+  // senders no longer produce it and receivers ignore it.
+  reserved 14;
+  reserved "handover_outgoing";
+  // Field 15 (source_discontinuity) belonged to the declared discontinuity,
+  // replaced by the source-app exception (ABI 4, fields 20-21).
+  reserved 15;
+  reserved "source_discontinuity";
+  // The source's orientation beyond yaw (ABI 3.1), a pass-through. Absent = yaw only.
+  optional int32 source_orientation_type = 16;
+  optional double source_pitch = 17;
+  optional double source_roll = 18;
+  // 19 (dormant relations withheld from realization) is retired: there is no
+  // activation gate.
+  reserved 19;
+  // RemoteRelationUpdate::exception_id / exception_payload (ABI 4): the source
+  // app raised an exception with this update. Absent = none.
+  optional uint32 exception_id = 20;
+  optional bytes exception_payload = 21;
+  // ABI 4.14 (RemoteRelationUpdate::anchor_charts): each active bound anchor's pose in the transfer leaf containing it.
+  // Absent = none (or an older sender).
+  repeated AnchorChartProto anchor_charts = 22;
+}
+
+message AnchorChartProto {
+  string anchor_name = 1;
+  int64 scope_shared_id = 2;
+  int64 scope_source_space_id = 3;
+  int64 scope_source_element_id = 4;
+  double x = 5;
+  double y = 6;
+  double z = 7;
+  double yaw = 8;
+}
+
+message ContainmentObservationProto {
+  // Containing element identity (same triple the referents use). The pose, chart
+  // and blend weight of ABI 3 are gone: the transfer leaf is the actor's scope and
+  // the empty-scope mapping maps the root.
+  int64 scope_shared_id = 1;
+  int64 scope_source_space_id = 2;
+  int64 scope_source_element_id = 3;
+  reserved 4 to 13;
+}
+
+enum RelationUpdateTimingProto {
+  RELATION_UPDATE_TIMING_LEGACY = 0;
+  RELATION_UPDATE_TIMING_TIMESTAMPED_OBSERVATION = 1;
+  RELATION_UPDATE_TIMING_OBSERVATION_RESET = 2;
+}
+
+message ElementEventProto {
+  enum Type {
+    ADDED = 0;
+    REMOVED = 1;
+    // A receiver unlinked a share it had linked; unlink_source_* name the
+    // sharer's element, peer_space_id the receiver. Delivered only to the
+    // sharer. source_space_id / source_element_id are left unset on purpose: a
+    // peer that predates this type reads an unknown type as REMOVED, and with
+    // no source element that removes nothing.
+    UNLINKED = 2;
+  }
+  Type type = 1;
+  int64 shared_id = 2;
+  int64 parent_shared_id = 3;
+  string tag = 4;
+  // Opaque application payload (e.g. serialized entity/prefab) carried verbatim
+  // to the receiving space so it can reconstruct the shared object (OnShare).
+  bytes user_data = 5;
+  // Source-side identity of the shared element. The receiver needs this to record
+  // pending_share_source_ and create the ElementLinker link on resolve-on-share
+  // (LinkToExisting). Dropping it (the pre-fix bug) leaves the temp un-removed and
+  // unlinked: the cross-space referent then resolves via shared-id to the duplicate
+  // temp at the origin → the clone realizes at the room centre.
+  int64 source_space_id = 6;
+  int64 source_element_id = 7;
+  // UNLINKED only: the receiver space that removed its link.
+  int64 peer_space_id = 8;
+  // UNLINKED only: the sharer's element whose link was removed.
+  int64 unlink_source_space_id = 9;
+  int64 unlink_source_element_id = 10;
+}
+
+message RelationEventProto {
+  int64 actor_shared_id = 1;
+  string anchor_name = 2;
+  int64 referent_shared_id = 3;
+  int32 kernel_type = 4;
+  int32 from_phase = 5;
+  int32 to_phase = 6;
+  double timestamp = 7;
+}
+
+message SpaceEvent {
+  oneof event {
+    RelationUpdateProto relation_update = 1;
+    ElementEventProto element_event = 2;
+    RelationEventProto relation_event = 3;
+  }
+}
+
+// --- Client -> Host ---
+message UpdateActorStateRequest {
+  int64 space_id = 1;
+  int64 actor_id = 2;
+  double x = 3;
+  double y = 4;
+  double yaw = 5;
+  // Shared (cross-space) id of the actor's element. The host resolves its own
+  // local actor by this id; actor_id is a per-space local handle kept only as a
+  // fallback.
+  int64 actor_shared_id = 6;
+}
+
+// ShareElement: client shares an element event up to the host, which applies
+// it locally and relays to all other connected clients (except the source).
+message ShareElementRequest {
+  int64 space_id = 1;
+  ElementEventProto event = 2;
+}
+
+// PropagateRelation: client forwards a relation update up to the host, which
+// applies it locally (producing a realization target for the host's display)
+// and relays it to all other connected clients (except the source).
+message PropagateRelationRequest {
+  int64 space_id = 1;
+  RelationUpdateProto update = 2;
+}

@@ -1,0 +1,12 @@
+*.sh text eol=lf
+*.py text eol=lf
+spatialblend/api/c/trace.format.md text eol=lf
+
+# C/C++ sources, headers, includes and Bazel files are LF in the repository and in every checkout, whatever the
+# client's core.autocrlf (a CRLF checkout committed with autocrlf false rewrote whole files).
+*.cc text eol=lf
+*.h text eol=lf
+*.inc text eol=lf
+BUILD text eol=lf
+*.bazel text eol=lf
+*.bzl text eol=lf

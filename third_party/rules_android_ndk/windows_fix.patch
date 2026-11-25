@@ -1,0 +1,26 @@
+--- a/rules.bzl
++++ b/rules.bzl
+@@ -103,20 +103,21 @@
+ 
+ # Manually create a partial symlink tree of the NDK to avoid creating BUILD
+ # files in the real NDK directory.
+ def _create_symlinks(ctx, ndk_path, clang_directory, sysroot_directory):
++    ndk_path = str(ndk_path).replace("\\", "/")
+     # Path needs to end in "/" for replace() below to work
+     if not ndk_path.endswith("/"):
+         ndk_path = ndk_path + "/"
+ 
+     for p in ctx.path(ndk_path + clang_directory).readdir():
+-        repo_relative_path = str(p).replace(ndk_path, "")
++        repo_relative_path = str(p).replace("\\", "/").replace(ndk_path, "")
+ 
+         # Skip sysroot directory, since it gets its own BUILD file
+         if repo_relative_path != sysroot_directory:
+             ctx.symlink(p, repo_relative_path)
+ 
+     for p in ctx.path(ndk_path + sysroot_directory).readdir():
+-        repo_relative_path = str(p).replace(ndk_path, "")
++        repo_relative_path = str(p).replace("\\", "/").replace(ndk_path, "")
+         ctx.symlink(p, repo_relative_path)
+ 
+     ctx.symlink(ndk_path + "sources", "sources")

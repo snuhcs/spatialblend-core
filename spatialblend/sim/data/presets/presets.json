@@ -1,0 +1,28 @@
+{
+  "presets": [
+    {
+      "id": "173_410",
+      "file": "173_410.json",
+      "source_scene": "173",
+      "target_scene": "410",
+      "mapping_class": "Affine",
+      "description": "Affine pair: similar geometry, linear mapping"
+    },
+    {
+      "id": "733_173",
+      "file": "733_173.json",
+      "source_scene": "733",
+      "target_scene": "173",
+      "mapping_class": "Nonlinear",
+      "description": "Nonlinear pair: geometry deformation"
+    },
+    {
+      "id": "733_245",
+      "file": "733_245.json",
+      "source_scene": "733",
+      "target_scene": "245",
+      "mapping_class": "Topo-different",
+      "description": "Topo-different pair: different topology"
+    }
+  ]
+}

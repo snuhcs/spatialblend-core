@@ -1,0 +1,26 @@
+SpatialBlend Core
+Copyright (c) 2024-2026 Seoul National University. Released under the MIT License (LICENSE), except as listed below.
+
+1. third_party/compdb/aspects.bzl
+   Copyright 2024 The Bazel Authors. Apache License 2.0 (LICENSES/Apache-2.0.txt). The file keeps its header.
+
+2. third_party/boost.thread, boost.qvm, rules_android_ndk: patch files against the upstream modules (Boost Software
+   License 1.0; Apache License 2.0 for rules_android_ndk). The patches are offered under the same terms as the files
+   they modify.
+
+3. spatialblend/sim/data/presets/ (three scene pairs: walkable outlines, chair outlines, entity positions, one source
+   trajectory)
+   Derived from the LocoVR dataset (Takeyama, Liu and Sra, ICLR 2025; https://github.com/kt2024-hal/LocoVR), MIT License,
+   Copyright (c) 2023 kojirotakeyama (LICENSES/MIT-LocoVR.txt). LocoVR's scene geometry is itself derived from the
+   Habitat-Matterport 3D (HM3D / HM3DSem) datasets, which are subject to Matterport's terms of use.
+
+4. spatialblend/sim/embodiments/*.json
+   Offsets measured on the SMPL and SMPL-X neutral body models (https://smpl.is.tue.mpg.de, https://smpl-x.is.tue.mpg.de).
+   Only the measured numbers are included; no model file, mesh or parameter of the body models is distributed here.
+
+5. spatialblend/api/python/capi/_mono_number.py
+   Reproduces Mono's double.ToString("R") (Number.NumberToDouble); its numeric tables were read from the Mono class
+   libraries shipped with Unity (Mono: MIT License, Copyright (c) .NET Foundation and Contributors / Xamarin).
+
+Third-party libraries fetched at build time (not in this repository) and statically linked into the native binaries are
+listed in THIRD_PARTY.md; a binary release carries THIRD_PARTY_NOTICES-native.txt with their notices.

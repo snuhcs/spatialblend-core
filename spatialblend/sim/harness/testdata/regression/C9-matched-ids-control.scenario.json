@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "id": "C9-matched-ids-control",
+  "tier": "T2",
+  "regime": "ambiguous",
+  "verify_by": ["differential"],
+
+  "spaces": [
+    {
+      "id": "A", "role": "source",
+      "walkable": [[0, 0], [20, 0], [20, 20], [0, 20]],
+      "elements": [
+        {
+          "tag": "deskA", "shared_id": 700, "parent": "room",
+          "transform": {"pos": [5, 5, 0], "yaw": 0.0},
+          "footprint": {"kind": "box", "size": [2, 2, 2]},
+          "propagate": true
+        }
+      ]
+    },
+    {
+      "id": "B", "role": "target",
+      "walkable": [[0, 0], [20, 0], [20, 20], [0, 20]],
+      "elements": []
+    }
+  ],
+
+  "identity": {
+    "share_from": "A",
+    "expect": [
+      {"shared_id": 700, "resolution": "add_as_new"},
+      {"shared_id": 9001, "resolution": "add_as_new"}
+    ],
+    "mismatched_ids": false
+  },
+
+  "actors": [
+    {
+      "id": "user", "space": "A", "shared_id": 9001,
+      "anchors": [{"name": "root", "offset": [0, 0, 0]}],
+      "bindings": [{"anchor": "root", "kernel": "spacing"}],
+      "start": [5, 0, 1.5708]
+    }
+  ],
+
+  "behavior": {
+    "kind": "script",
+    "script": [
+      {"op": "approach", "tag": "deskA", "distance": 1.1, "duration": 3.0}
+    ]
+  },
+
+  "network": {"mode": "loopback", "latency_ms": 0, "jitter_ms": 0, "drop_rate": 0.0, "reorder": false},
+  "core": {"referent_resolve": "linker", "weight_smoothing": 0.25, "min_move": 0.02, "min_yaw": 0.02,
+           "policy": "progressive", "controller": {"v_max": 1.4, "w_max": 2.0}},
+
+  "expect": [
+    {"check": "C9.matched_ids.linker_and_sharedid_agree", "eps": 1e-9}
+  ]
+}

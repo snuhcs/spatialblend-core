@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "id": "R6-standing-jitter",
+  "tier": "T2",
+  "regime": "ambiguous",
+  "verify_by": ["differential", "bounds"],
+
+  "spaces": [
+    {
+      "id": "A", "role": "source",
+      "walkable": [[0, 0], [20, 0], [20, 20], [0, 20]],
+      "elements": [
+        {"tag": "objA", "shared_id": 300, "parent": "room", "transform": {"pos": [4, 4, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true},
+        {"tag": "objB", "shared_id": 301, "parent": "room", "transform": {"pos": [16, 5, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true},
+        {"tag": "objC", "shared_id": 302, "parent": "room", "transform": {"pos": [16, 11, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true},
+        {"tag": "objD", "shared_id": 303, "parent": "room", "transform": {"pos": [16, 17, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true}
+      ]
+    },
+    {
+      "id": "B", "role": "target",
+      "walkable": [[0, 0], [20, 0], [20, 20], [0, 20]],
+      "elements": [
+        {"tag": "objA", "shared_id": 300, "parent": "room", "transform": {"pos": [10, 3, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true},
+        {"tag": "objB", "shared_id": 301, "parent": "room", "transform": {"pos": [17, 8, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true},
+        {"tag": "objC", "shared_id": 302, "parent": "room", "transform": {"pos": [3, 12, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true},
+        {"tag": "objD", "shared_id": 303, "parent": "room", "transform": {"pos": [10, 17, 0], "yaw": 0.0}, "footprint": {"kind": "box", "size": [2, 2, 2]}, "propagate": true}
+      ]
+    }
+  ],
+
+  "identity": {
+    "share_from": "A",
+    "expect": [
+      {"shared_id": 300, "resolution": "link_to_existing"},
+      {"shared_id": 301, "resolution": "link_to_existing"},
+      {"shared_id": 302, "resolution": "link_to_existing"},
+      {"shared_id": 303, "resolution": "link_to_existing"},
+      {"shared_id": 9001, "resolution": "add_as_new"}
+    ],
+    "mismatched_ids": false
+  },
+
+  "actors": [
+    {
+      "id": "user", "space": "A", "shared_id": 9001,
+      "anchors": [{"name": "root", "offset": [0, 0, 0]}],
+      "bindings": [{"anchor": "root", "kernel": "spacing"}],
+      "start": [4, 4, 0]
+    }
+  ],
+
+  "behavior": {
+    "kind": "script",
+    "script": [
+      {"op": "wander", "radius": 0.5, "duration": 2.0}
+    ]
+  },
+
+  "network": {"mode": "loopback", "latency_ms": 0, "jitter_ms": 0, "drop_rate": 0.0, "reorder": false},
+  "core": {"referent_resolve": "linker", "weight_smoothing": 0.25, "min_move": 0.0, "min_yaw": 0.0,
+           "policy": "progressive", "controller": {"v_max": 1.4, "w_max": 2.0}},
+
+  "expect": [
+    {"check": "R6.standing_jitter.holds_commitment_no_flicker", "eps": 0.0}
+  ]
+}

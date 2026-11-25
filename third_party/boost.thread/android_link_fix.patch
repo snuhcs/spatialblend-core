@@ -1,0 +1,14 @@
+--- a/BUILD.bazel	2024-03-19 10:00:00.000000000 +0000
++++ b/BUILD.bazel	2024-03-19 10:00:00.000000000 +0000
+@@ -54,7 +54,10 @@
+         "BOOST_THREAD_DONT_USE_ATOMIC",
+     ],
+     includes = ["include"],
+-    linkopts = ["-lpthread"],
++    linkopts = select({
++        "@platforms//os:android": [""],
++        "//conditions:default": ["-lpthread"],
++    }),
+     target_compatible_with = select({
+         "@platforms//os:windows": ["@platforms//:incompatible"],
+         "@platforms//os:macos": ["@platforms//:incompatible"],

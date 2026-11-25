@@ -1,0 +1,13 @@
+{
+  "format": "spatialblend.embodiment.display-fallback",
+  "status": "INTERIM: used only when the case carries no `embodiment` registration; remove when exporters write it",
+  "skeleton": "smplx-22 (SMPL-X neutral body)",
+  "anchors": [
+    { "id": "pelvis", "bone": "pelvis", "offset": { "forward": 0.0634, "left": 0.0, "up": -0.1860 }, "frame": "pelvis-joint frame, yaw-rotated: anchor = J0 + R(yaw) x (forward, left), up added to z; metres", "families": ["AffordancePose"] }
+  ],
+  "provenance": {
+    "source": "SMPL-X neutral body, measured offline 2026-10-19; the licensed model files are not distributed",
+    "procedure": "SMPL-X neutral (betas = 0) seated, hips and knees flexed 90 deg, buttock + posterior-thigh vertices, rigid seat plane through each side's lowest vertex, 10 mm patch, midline mean (smplx 0.1.28)",
+    "note": "a measurement of a body model, registered here for DISPLAY only; the app / embodiment driver owns the registration"
+  }
+}

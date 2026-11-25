@@ -1,0 +1,219 @@
+{
+ "anchors": [
+  {
+   "bone": null,
+   "families": [
+    "Spacing"
+   ],
+   "name": "root"
+  },
+  {
+   "bone": "pelvis",
+   "families": [
+    "AffordancePose"
+   ],
+   "name": "pelvis",
+   "offset": {
+    "position": [
+     0.0604,
+     0.0,
+     -0.1764
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ]
+   },
+   "provenance": {
+    "asset": "SMPL_NEUTRAL.pkl",
+    "asset_sha256": "98e65c74ad9b998783132f00880d1025a8d64b158e040e6ef13a557e5098bc42",
+    "measured_on": "2026-10-19",
+    "measured_on_host": "labhost-a",
+    "procedure": "Sit-bone offset measurement (measured from the body model's geometry): pose the model seated (global_orient = I, both hips and both knees flexed 90 deg, every other joint at rest); candidate vertices = dominant LBS joint in {pelvis, left/right hip, spine1}; per side a rigid seat plane through the side's lowest candidate vertex, contact patch = candidate vertices within 10 mm, contact point = patch centroid; the anchor is the midline point (mean of the two sides, lateral 0) expressed relative to the pelvis joint J0 in the pelvis frame as (forward, left, up). Neutral shape (betas = 0). Soft tissue not modelled.",
+    "shape": "neutral, betas = 0",
+    "software": "smplx 0.1.28",
+    "source": "measured offline by the evaluation harness (not public)",
+    "units": "m"
+   }
+  },
+  {
+   "bone": "left_wrist",
+   "families": [
+    "AffordancePose"
+   ],
+   "name": "hand_l",
+   "offset": {
+    "position": [
+     0.0622,
+     -0.0281,
+     -0.0274
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ]
+   },
+   "provenance": {
+    "asset": "SMPL_NEUTRAL.pkl",
+    "asset_sha256": "98e65c74ad9b998783132f00880d1025a8d64b158e040e6ef13a557e5098bc42",
+    "measured_on": "2026-10-19",
+    "measured_on_host": "labhost-a",
+    "procedure": "Palm-point measurement: arms swung forward from the T-pose (shoulder yaw -90 / +90 deg, flat hands); the hand's candidate vertices are those whose dominant LBS joint belongs to that hand (measured on the full model: wrist + 15 finger joints for SMPL-X, wrist + hand joint for SMPL; those finger joints are not in this 22-joint registration skeleton, which registers the wrist as the bone); contact patch = the hand's lowest 10 mm; point = patch centroid, per hand, no mirroring; relative to the wrist joint in the forearm frame (forward, left, up). Assumption inherited from the procedure: the hand direction in the world is the body heading (the track carries no wrist orientation). Patch-tolerance sensitivity: the palm point is not stable (lateral 0.054/0.028/0.005 m for 5/10/20 mm); 10 mm is the declared procedure.",
+    "shape": "neutral, betas = 0",
+    "software": "smplx 0.1.28",
+    "source": "measured offline by the evaluation harness (not public)",
+    "units": "m"
+   }
+  },
+  {
+   "bone": "right_wrist",
+   "families": [
+    "AffordancePose"
+   ],
+   "name": "hand_r",
+   "offset": {
+    "position": [
+     0.0735,
+     0.0651,
+     -0.0308
+    ],
+    "rotation": [
+     0,
+     0,
+     0,
+     1
+    ]
+   },
+   "provenance": {
+    "asset": "SMPL_NEUTRAL.pkl",
+    "asset_sha256": "98e65c74ad9b998783132f00880d1025a8d64b158e040e6ef13a557e5098bc42",
+    "measured_on": "2026-10-19",
+    "measured_on_host": "labhost-a",
+    "procedure": "Palm-point measurement: arms swung forward from the T-pose (shoulder yaw -90 / +90 deg, flat hands); the hand's candidate vertices are those whose dominant LBS joint belongs to that hand (measured on the full model: wrist + 15 finger joints for SMPL-X, wrist + hand joint for SMPL; those finger joints are not in this 22-joint registration skeleton, which registers the wrist as the bone); contact patch = the hand's lowest 10 mm; point = patch centroid, per hand, no mirroring; relative to the wrist joint in the forearm frame (forward, left, up). Assumption inherited from the procedure: the hand direction in the world is the body heading (the track carries no wrist orientation). Patch-tolerance sensitivity: the palm point is not stable (lateral 0.054/0.028/0.005 m for 5/10/20 mm); 10 mm is the declared procedure.",
+    "shape": "neutral, betas = 0",
+    "software": "smplx 0.1.28",
+    "source": "measured offline by the evaluation harness (not public)",
+    "units": "m"
+   }
+  }
+ ],
+ "body": {
+  "floor_footprint_radius_m": 0.19203,
+  "provenance": {
+   "asset": "SMPL_NEUTRAL.pkl",
+   "asset_sha256": "98e65c74ad9b998783132f00880d1025a8d64b158e040e6ef13a557e5098bc42",
+   "measured_on": "2026-10-20",
+   "measured_on_host": "labhost-a",
+   "procedure": "spatialblend/sim/embodiments/measure_footprint_radius.py: the largest horizontal distance, from the vertical axis through the pelvis joint (the actor root), of any vertex of the standing rest-pose model (global_orient = identity, every joint at rest, neutral shape betas = 0) whose dominant skinning joint is the pelvis, a hip, spine1, a knee, an ankle or a foot (1975 vertices): the circle on the floor that bounds the legs, feet and lower trunk. The arms and the head are not part of the floor footprint. Soft tissue and clothing are not modelled.",
+   "sensitivity_betas0_minus2_plus2_m": [
+    0.18867,
+    0.20092
+   ],
+   "shape": "neutral, betas = 0",
+   "software": "numpy (the script reads the model file only)",
+   "units": "m"
+  }
+ },
+ "bone_frame": "Each bone frame at the registered rest pose is x forward, y left, z up (the frame of the measurement: offsets are (forward, left, up)); the pelvis bone is posed by global_orient with the body heading as yaw. A driver publishes the bone rotation in this convention.",
+ "format": "spatialblend.embodiment",
+ "frame": "z-up, right-handed",
+ "id": "smpl-neutral",
+ "schema_version": "1.0.0",
+ "skeleton": {
+  "joints": [
+   {
+    "name": "pelvis",
+    "parent": -1
+   },
+   {
+    "name": "left_hip",
+    "parent": 0
+   },
+   {
+    "name": "right_hip",
+    "parent": 0
+   },
+   {
+    "name": "spine1",
+    "parent": 0
+   },
+   {
+    "name": "left_knee",
+    "parent": 1
+   },
+   {
+    "name": "right_knee",
+    "parent": 2
+   },
+   {
+    "name": "spine2",
+    "parent": 3
+   },
+   {
+    "name": "left_ankle",
+    "parent": 4
+   },
+   {
+    "name": "right_ankle",
+    "parent": 5
+   },
+   {
+    "name": "spine3",
+    "parent": 6
+   },
+   {
+    "name": "left_foot",
+    "parent": 7
+   },
+   {
+    "name": "right_foot",
+    "parent": 8
+   },
+   {
+    "name": "neck",
+    "parent": 9
+   },
+   {
+    "name": "left_collar",
+    "parent": 9
+   },
+   {
+    "name": "right_collar",
+    "parent": 9
+   },
+   {
+    "name": "head",
+    "parent": 12
+   },
+   {
+    "name": "left_shoulder",
+    "parent": 13
+   },
+   {
+    "name": "right_shoulder",
+    "parent": 14
+   },
+   {
+    "name": "left_elbow",
+    "parent": 16
+   },
+   {
+    "name": "right_elbow",
+    "parent": 17
+   },
+   {
+    "name": "left_wrist",
+    "parent": 18
+   },
+   {
+    "name": "right_wrist",
+    "parent": 19
+   }
+  ]
+ },
+ "units": "m"
+}

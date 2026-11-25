@@ -1,0 +1,3 @@
+# Byte-exact references written by Unity / Unity mono: never convert line endings.
+*.json -text
+*.tsv -text

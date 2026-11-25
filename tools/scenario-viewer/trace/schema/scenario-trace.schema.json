@@ -1,0 +1,720 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spatialblend.invalid/schema/scenario-trace/1.1.0",
+  "title": "spatialblend.scenario-trace case file",
+  "description": "One verification case: static geometry plus typed channels over one time base. World frame is right-handed, z-up; metres, radians, seconds. See SCHEMA.md.",
+  "type": "object",
+  "required": [
+    "format",
+    "schema_version",
+    "provenance",
+    "case",
+    "time",
+    "spaces",
+    "actors",
+    "channels"
+  ],
+  "properties": {
+    "format": {
+      "const": "spatialblend.scenario-trace"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "synthetic": {
+      "type": "boolean",
+      "description": "true for fixtures that are not real producer output; the viewer labels them"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "case": {
+      "$ref": "#/$defs/case"
+    },
+    "time": {
+      "$ref": "#/$defs/time"
+    },
+    "spaces": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/space"
+      }
+    },
+    "correspondence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/correspondence"
+      }
+    },
+    "actors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/actor"
+      }
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/channel"
+      }
+    },
+    "expectations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expectation"
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/result"
+      }
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "fields the producer could not export for this case, with the reason"
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": [
+        "producer",
+        "generated_at",
+        "schema_version"
+      ],
+      "properties": {
+        "producer": {
+          "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        "repo": {
+          "type": "string"
+        },
+        "git_sha": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "id",
+        "suite",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "suite": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "spec": {
+          "type": "object",
+          "properties": {
+            "rule": {
+              "type": "string"
+            },
+            "citations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "source": {
+              "type": "string",
+              "description": "path or test name the case comes from"
+            },
+            "level": {
+              "enum": [
+                "unit",
+                "scenario",
+                "matrix",
+                "parity",
+                "eval"
+              ]
+            },
+            "plan_key": {
+              "type": "string"
+            }
+          }
+        },
+        "tags": {
+          "type": "object",
+          "description": "free-form facets: families, modes, statuses, scene, scenario, variant"
+        }
+      }
+    },
+    "time": {
+      "type": "object",
+      "required": [
+        "base",
+        "n_ticks",
+        "dt_s"
+      ],
+      "properties": {
+        "base": {
+          "const": "tick"
+        },
+        "n_ticks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dt_s": {
+          "type": "number"
+        },
+        "t0_s": {
+          "type": "number"
+        }
+      }
+    },
+    "vec2list": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "pose": {
+      "type": "object",
+      "required": [
+        "p",
+        "q"
+      ],
+      "properties": {
+        "p": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "q": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "unit quaternion x,y,z,w"
+        }
+      }
+    },
+    "space": {
+      "type": "object",
+      "required": [
+        "id",
+        "role",
+        "elements"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "source",
+            "receiver",
+            "other"
+          ]
+        },
+        "navigable_root": {
+          "type": "integer"
+        },
+        "free_space": {
+          "type": "object",
+          "properties": {
+            "outer": {
+              "$ref": "#/$defs/vec2list"
+            },
+            "holes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/vec2list"
+              }
+            },
+            "origin": {
+              "type": "string",
+              "description": "which core computation produced it"
+            }
+          }
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/element"
+          }
+        }
+      }
+    },
+    "element": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "shared_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "region",
+            "object",
+            "obstacle",
+            "interaction_region",
+            "person",
+            "border",
+            "room",
+            "surface",
+            "other"
+          ]
+        },
+        "parent": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "e.g. transfer_leaf, occluder, seat"
+        },
+        "world_transform": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 16,
+          "maxItems": 16,
+          "description": "4x4 row-major, as the app gave it"
+        },
+        "footprint_local": {
+          "$ref": "#/$defs/vec2list"
+        },
+        "ground": {
+          "$ref": "#/$defs/vec2list",
+          "description": "world ground image of the footprint, as the core computed it (GroundFrame)"
+        },
+        "shape3d": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "extrude_height_m": {
+              "type": "number"
+            },
+            "mesh_asset": {
+              "type": "string"
+            }
+          }
+        },
+        "parts": {
+          "type": "array",
+          "description": "1.1.0. The named parts (affordance sub-regions) of the element. A part's world_transform maps its frame to the world (4x4 row-major); its plane is its local z = 0 and its normal is its local +z; footprint_local is its polygon in its own frame.",
+          "items": {
+            "$ref": "#/$defs/part"
+          }
+        }
+      }
+    },
+    "part": {
+      "type": "object",
+      "required": [
+        "name",
+        "world_transform",
+        "footprint_local"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "world_transform": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 16,
+          "maxItems": 16,
+          "description": "4x4 row-major, part frame -> world"
+        },
+        "footprint_local": {
+          "$ref": "#/$defs/vec2list"
+        },
+        "origin": {
+          "enum": [
+            "scene-spec",
+            "core"
+          ],
+          "description": "core: read from the core's SpatialDefinition; scene-spec: the scenario's declaration"
+        }
+      }
+    },
+    "correspondence": {
+      "type": "object",
+      "required": [
+        "source",
+        "receiver"
+      ],
+      "properties": {
+        "source_space": {
+          "type": "string"
+        },
+        "receiver_space": {
+          "type": "string"
+        },
+        "source": {
+          "type": "integer"
+        },
+        "receiver": {
+          "type": "integer"
+        },
+        "shared_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "id",
+        "space",
+        "root_channel"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "space": {
+          "type": "string"
+        },
+        "element": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "role": {
+          "enum": [
+            "source_actor",
+            "receiver_body",
+            "other"
+          ]
+        },
+        "root_channel": {
+          "type": "string",
+          "description": "id of a pose3d channel"
+        },
+        "body": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "capsule_radius_m": {
+              "type": "number"
+            },
+            "capsule_height_m": {
+              "type": "number"
+            }
+          }
+        },
+        "skeleton": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "format": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "units": {
+              "type": "string"
+            },
+            "frame": {
+              "type": "string"
+            },
+            "joints": {
+              "type": "array",
+              "description": "1.1.0: objects {name, parent} (parent = joint index or -1); 1.0.0 string names with the parallel `parents` array are still accepted",
+              "items": {
+                "type": [
+                  "string",
+                  "object"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "parent": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "parents": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "joints_channel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "embodiment": {
+          "description": "1.1.0: the embodiment the core held for this actor (spatialblend.embodiment 1.x, canonical JSON, origin 'registered'); see SCHEMA.md",
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "channel": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "data"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "closed registry in SCHEMA.md; a viewer lists but ignores unknown types"
+        },
+        "space": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "actor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "time_base": {
+          "const": "tick"
+        },
+        "continuous": {
+          "type": "boolean"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "doc": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string",
+          "description": "core API the values were read from"
+        },
+        "producer": {
+          "type": "object",
+          "description": "1.1.0. Who produced this channel when it is not the case's producer (a sidecar channel keeps its own).",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "git_sha": {
+              "type": "string"
+            }
+          }
+        },
+        "derived": {
+          "enum": [
+            "motiongen",
+            "display-ik",
+            "recorded"
+          ],
+          "description": "1.1.0. How a joints channel was derived: motiongen = MotionGen output (never core output), display-ik = a viewer-side display limb pose, recorded = a recorded body."
+        },
+        "data": {
+          "type": "object"
+        },
+        "bounds": {
+          "type": "array",
+          "description": "reference lines for a plot of this channel",
+          "items": {
+            "type": "object",
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "scope_set",
+            "scope_mode",
+            "status",
+            "yaw_source",
+            "guard",
+            "boolean",
+            "text",
+            "affordance"
+          ]
+        },
+        "tick": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "family": {
+          "type": "string"
+        },
+        "expected": {},
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "expectation",
+        "pass"
+      ],
+      "properties": {
+        "expectation": {
+          "type": "string"
+        },
+        "actual": {},
+        "pass": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "null = not evaluated by the producer"
+        },
+        "test": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "row": {
+          "type": "object"
+        },
+        "guards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "column",
+              "pass"
+            ],
+            "properties": {
+              "column": {
+                "type": "string"
+              },
+              "bound": {},
+              "value": {},
+              "pass": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
